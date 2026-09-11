@@ -95,13 +95,13 @@
                 <table>
                     <thead>
                         <tr>
-                            <th width="15%">Revenda</th>
+                            <th width="18%">Revenda</th>
                             <th width="12%">Faturamento Ano</th>
-                            <th width="11%">Telefone</th>
+                            <th width="12%">Telefone</th>
                             <th width="8%">Acesso?</th>
                             <th width="12%">Classificação</th>
                             <th width="11%">Data Últ. Conversa</th>
-                            <th width="21%">Assunto / Resumo</th>
+                            <th width="17%">Assunto / Resumo</th>
                             <th width="10%">Status (Farol)</th>
                         </tr>
                     </thead>
@@ -134,22 +134,64 @@
             }
         });
 
+        // DETECÇÃO AVANÇADA E COMPATÍVEL DE COLUNAS
+        function detectarColunas(headers) {
+            let cols = { vendedor: null, revenda: null, faturamento: null, telefone: null, acesso: null };
+
+            const clean = (str) => str ? str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
+
+            headers.forEach(h => {
+                const norm = clean(h);
+
+                // Equipe / Vendedor
+                if (!cols.vendedor && (norm.includes('equipe') || norm.includes('atendimento') || norm.includes('vendedor') || norm.includes('ev'))) {
+                    cols.vendedor = h;
+                }
+                // Revenda / Fantasia
+                if (!cols.revenda && (norm.includes('fantasia') || norm.includes('revenda') || norm.includes('cliente'))) {
+                    cols.revenda = h;
+                }
+                // Telefone / Celular / Fone
+                if (!cols.telefone && (norm.includes('telefone') || norm.includes('fone') || norm.includes('celular') || norm.includes('tel') || norm.includes('contato'))) {
+                    cols.telefone = h;
+                }
+                // Faturamento
+                if (!cols.faturamento && (norm.includes('fatur') || norm.includes('valor') || norm.includes('venda'))) {
+                    cols.faturamento = h;
+                }
+                // Acesso
+                if (!cols.acesso && (norm.includes('acess') || norm.includes('plataforma'))) {
+                    cols.acesso = h;
+                }
+            });
+
+            // Fallbacks de segurança caso não encontre pelos nomes
+            if (!cols.vendedor) cols.vendedor = headers[0];
+            if (!cols.revenda) cols.revenda = headers[1] || headers[0];
+            if (!cols.faturamento) cols.faturamento = headers[2] || headers[0];
+            if (!cols.acesso) cols.acesso = headers[3] || headers[0];
+
+            return cols;
+        }
+
         // PROCESSAMENTO DE DADOS (Limpeza e Classificação)
         function processarDados(data) {
             if (data.length === 0) return;
             const cols = detectarColunas(Object.keys(data[0]));
+
             globalData = data.map(row => {
-                const vendedor = row[cols.vendedor] || 'Sem Vendedor';
-                const revenda = row[cols.revenda] || 'Revenda Indefinida';
+                const vendedor = row[cols.vendedor] ? row[cols.vendedor].trim() : 'Sem Vendedor';
+                const revenda = row[cols.revenda] ? row[cols.revenda].trim() : 'Revenda Indefinida';
                 const faturamento = limparMoeda(row[cols.faturamento]);
-                const telefone = row[cols.telefone] || '-';
+                const telefone = (cols.telefone && row[cols.telefone]) ? row[cols.telefone].trim() : '-';
                 const acesso = validarAcesso(row[cols.acesso]);
                 const classificacao = definirClassificacao(faturamento, acesso);
+                
                 return { vendedor, revenda, faturamento, telefone, acesso, classificacao };
             });
 
             // Extrair Vendedores Únicos e criar as abas
-            const vendedores = [...new Set(globalData.map(d => d.vendedor))].sort();
+            const vendedores = [...new Set(globalData.map(d => d.vendedor))].filter(v => v !== '').sort();
             gerarAbas(vendedores);
             
             if (vendedores.length > 0) selecionarAba(vendedores[0]);
@@ -185,32 +227,6 @@
             return s === 'sim' || s === 'true' || s === 'ativo' || s === '1' || s === 'ok';
         }
 
-        function detectarColunas(headers) {
-            let cols = { vendedor: headers[0], revenda: headers[1], faturamento: headers[2], telefone: '', acesso: headers[3] };
-            headers.forEach(h => {
-                const str = h.toLowerCase();
-                // Identificação da coluna da Equipe de Atendimento para o Vendedor
-                if (str.includes('equipe de atendimento - ev') || str.includes('equipe de atendimento') || str.includes('vendedor')) {
-                    cols.vendedor = h;
-                }
-                // Identificação da coluna Fantasia para o nome da Revenda
-                else if (str === 'fantasia' || str.includes('fantasia')) {
-                    cols.revenda = h;
-                }
-                // Identificação da coluna Telefone
-                else if (str.includes('telefone') || str.includes('fone') || str.includes('celular')) {
-                    cols.telefone = h;
-                }
-                else if (str.includes('fatur') || str.includes('valor')) {
-                    cols.faturamento = h;
-                }
-                else if (str.includes('acess') || str.includes('plataforma')) {
-                    cols.acesso = h;
-                }
-            });
-            return cols;
-        }
-
         // LÓGICA DE DATAS (Farol)
         function avaliarStatus(dataStr) {
             if (!dataStr) return { txt: 'Pendente', cor: 'red' };
@@ -242,7 +258,7 @@
             document.querySelectorAll('.tab').forEach(t => {
                 t.classList.toggle('active', t.textContent === vendedor);
             });
-            document.getElementById('filter-input').value = ''; // Limpar filtro
+            document.getElementById('filter-input').value = ''; 
             renderizarTela();
         }
 
@@ -252,9 +268,9 @@
             
             let itens = globalData.filter(d => d.vendedor === currentVendedor);
             
-            // Regra de Ordenação Requerida:
+            // Regra de Ordenação:
             // 1. Maior Faturamento
-            // 2. Acesso à plataforma ativo (Mesmo sem faturamento)
+            // 2. Acesso à plataforma ativo
             // 3. Sem acesso e Sem Faturamento
             itens.sort((a, b) => {
                 if (b.faturamento !== a.faturamento) return b.faturamento - a.faturamento;
@@ -346,7 +362,6 @@
             if (assuntoNovo !== null) localCRM[nomeRevenda].assunto = assuntoNovo;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(localCRM));
 
-            // Atualiza a tag de farol na hora
             if (dataNova !== null && linhaTabela) {
                 const status = avaliarStatus(dataNova);
                 linhaTabela.querySelector('.status-cell').innerHTML = `<span class="tag bg-${status.cor}">${status.txt}</span>`;
