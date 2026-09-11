@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão Comercial - Energia Solar</title>
+    
+    <!-- PapaParse: Biblioteca super leve para importar o CSV em tempo real -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <style>
+        /* Paleta de Cores e Variáveis */
+        :root {
+            --primary: #2e7d32;       /* Verde Energia Solar */
+            --primary-dark: #1b5e20;  /* Verde Escuro */
+            --bg: #f4f7f6;            /* Fundo Claro/Branco */
+            --white: #ffffff;
+            --black: #212121;         /* Detalhes Pretos */
+            --border: #e0e0e0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { background-color: var(--bg); color: var(--black); }
+
+        /* Cabeçalho e Legenda */
+        header { background-color: var(--white); border-bottom: 3px solid var(--primary); padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        header h1 { font-size: 24px; color: var(--primary-dark); }
+        .legend { display: flex; gap: 10px; align-items: center; font-size: 13px; background: var(--bg); padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .tag { padding: 5px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; text-align: center; white-space: nowrap; }
+        
+        /* Cores das Tags */
+        .bg-green { background-color: #c8e6c9; color: #2e7d32; }
+        .bg-yellow { background-color: #fff9c4; color: #f57f17; }
+        .bg-red { background-color: #ffcdd2; color: #c62828; }
+
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+
+        /* Abas (Tabs) */
+        .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 20px; overflow-x: auto; gap: 5px; padding-bottom: 5px; }
+        .tab { padding: 10px 20px; cursor: pointer; border: none; background: transparent; font-size: 16px; font-weight: 600; color: #757575; border-bottom: 3px solid transparent; transition: 0.3s; }
+        .tab:hover { color: var(--primary); }
+        .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+
+        /* Dashboard */
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card { background: var(--white); padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid var(--primary); }
+        .card.inativa { border-left-color: #c62828; }
+        .card.evadida { border-left-color: #f57f17; }
+        .card h3 { font-size: 13px; color: #757575; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
+        .card .value { font-size: 26px; font-weight: bold; color: var(--black); }
+
+        /* Controles (Filtro) */
+        .toolbar { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .search-box { padding: 10px 15px; border: 1px solid var(--border); border-radius: 4px; width: 350px; font-size: 14px; outline: none; }
+        .search-box:focus { border-color: var(--primary); }
+
+        /* Tabela */
+        .table-wrapper { background: var(--white); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto; max-height: 60vh; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background-color: var(--primary); color: var(--white); padding: 12px 15px; font-weight: 500; position: sticky; top: 0; z-index: 10; font-size: 14px; }
+        td { padding: 12px 15px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 14px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #f1f8f1; }
+
+        .input-field { padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; background: var(--bg); transition: 0.2s; }
+        .input-field:focus { outline: none; border-color: var(--primary); background: var(--white); }
+        
+        .classificacao { font-size: 12px; padding: 4px 8px; border-radius: 4px; background: #eeeeee; font-weight: 600; color: var(--black); display: inline-block; }
+
+        .loader { text-align: center; padding: 50px; font-size: 18px; color: #757575; }
+        #app-content { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>☀️ Gestão Comercial de Revendas</h1>
+        <div class="legend">
+            <strong>Status do Contato:</strong>
+            <span class="tag bg-green">Na semana (≤ 7 dias)</span>
+            <span class="tag bg-yellow">No mês (≤ 30 dias)</span>
+            <span class="tag bg-red">Atrasado / S. Contato</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="loader" class="loader">
+            Carregando e organizando dados da carteira...<br>
+            <small>(Conectando à planilha na nuvem)</small>
+        </div>
+
+        <div id="app-content">
+            <div class="tabs" id="vendedor-tabs"></div>
+
+            <div class="dashboard" id="dashboard">
+                <div class="card"><h3 title="Total na carteira">Total Revendas</h3><div class="value" id="dash-total">0</div></div>
+                <div class="card"><h3 title="Com faturamento">Engajadas</h3><div class="value" id="dash-engajadas">0</div></div>
+                <div class="card evadida"><h3 title="Com faturamento e sem acesso">Evadidas</h3><div class="value" id="dash-evadidas">0</div></div>
+                <div class="card inativa"><h3 title="Sem faturamento e sem acesso">Inativas</h3><div class="value" id="dash-inativas">0</div></div>
+                <div class="card"><h3 title="Com contatos recentes">Atendimentos</h3><div class="value" id="dash-atendimentos">0</div></div>
+                <div class="card"><h3 title="Faturamento médio das ativas">Ticket Médio (Ativas)</h3><div class="value" id="dash-media">R$ 0,00</div></div>
+            </div>
+
+            <div class="toolbar">
+                <input type="text" id="filter-input" class="search-box" placeholder="Buscar revenda por nome...">
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="15%">Revenda</th>
+                            <th width="10%">Faturamento Ano</th>
+                            <th width="8%">Acesso?</th>
+                            <th width="12%">Classificação</th>
+                            <th width="12%">Data Últ. Conversa</th>
+                            <th width="30%">Assunto / Resumo</th>
+                            <th width="13%">Status (Farol)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Linhas geradas dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO DA PLANILHA
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTiu5kVcqWqUhRVRGorFZ8GuIAx5_RHGpgjZocVMv6RS_Ui-Ghipa1VsHEF89PN1T5Izf6ow8YiooXi/pub?gid=29863857&single=true&output=csv';
+        const STORAGE_KEY = 'crm_solar_data';
+        
+        let globalData = [];
+        let currentVendedor = null;
+        let localCRM = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
+        // INICIALIZAÇÃO
+        Papa.parse(CSV_URL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                processarDados(results.data);
+            },
+            error: function() {
+                document.getElementById('loader').innerHTML = 'Erro ao carregar dados. Verifique a conexão ou a URL do Google Sheets.';
+            }
+        });
+
+        // PROCESSAMENTO DE DADOS (Limpeza e Classificação)
+        function processarDados(data) {
+            if (data.length === 0) return;
+            const cols = detectarColunas(Object.keys(data[0]));
+
+            globalData = data.map(row => {
+                const vendedor = row[cols.vendedor] || 'Sem Vendedor';
+                const revenda = row[cols.revenda] || 'Revenda Indefinida';
+                const faturamento = limparMoeda(row[cols.faturamento]);
+                const acesso = validarAcesso(row[cols.acesso]);
+                const classificacao = definirClassificacao(faturamento, acesso);
+
+                return { vendedor, revenda, faturamento, acesso, classificacao };
+            });
+
+            // Extrair Vendedores Únicos e criar as abas
+            const vendedores = [...new Set(globalData.map(d => d.vendedor))].sort();
+            gerarAbas(vendedores);
+            
+            if (vendedores.length > 0) selecionarAba(vendedores[0]);
+
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+        }
+
+        // FUNÇÕES AUXILIARES DE LÓGICA COMERCIAL E TRATAMENTO
+        function definirClassificacao(fat, acesso) {
+            if (fat > 0 && acesso) return "Revenda engajada";
+            if (fat > 0 && !acesso) return "Revenda evadida";
+            if (fat === 0 && !acesso) return "Revenda inativa";
+            if (fat === 0 && acesso) return "Acesso s/ Venda"; 
+            return "-";
+        }
+
+        function limparMoeda(valor) {
+            if (!valor) return 0;
+            let numStr = valor.toString().replace(/[R$\s]/g, '');
+            if (numStr.includes('.') && numStr.includes(',')) numStr = numStr.replace(/\./g, '').replace(',', '.');
+            else if (numStr.includes(',')) numStr = numStr.replace(',', '.');
+            const num = parseFloat(numStr);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function validarAcesso(valor) {
+            if (!valor) return false;
+            const s = valor.toString().toLowerCase().trim();
+            return s === 'sim' || s === 'true' || s === 'ativo' || s === '1' || s === 'ok';
+        }
+
+        function detectarColunas(headers) {
+            let cols = { vendedor: headers[0], revenda: headers[1], faturamento: headers[2], acesso: headers[3] };
+            headers.forEach(h => {
+                const str = h.toLowerCase();
+                if (str.includes('vend')) cols.vendedor = h;
+                else if (str.includes('revend') || str.includes('cliente') || str.includes('parceiro')) cols.revenda = h;
+                else if (str.includes('fatur') || str.includes('valor')) cols.faturamento = h;
+                else if (str.includes('acess') || str.includes('plataforma')) cols.acesso = h;
+            });
+            return cols;
+        }
+
+        // LÓGICA DE DATAS (Farol)
+        function avaliarStatus(dataStr) {
+            if (!dataStr) return { txt: 'Pendente', cor: 'red' };
+            const [ano, mes, dia] = dataStr.split('-');
+            const dataContato = new Date(ano, mes - 1, dia);
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+
+            const diffDias = Math.floor((hoje - dataContato) / (1000 * 60 * 60 * 24));
+
+            if (diffDias <= 7) return { txt: 'Na semana', cor: 'green' };
+            if (diffDias <= 30) return { txt: 'No mês', cor: 'yellow' };
+            return { txt: 'Atrasado', cor: 'red' };
+        }
+
+        // FUNÇÕES DE INTERFACE (UI)
+        function gerarAbas(vendedores) {
+            const tabsDiv = document.getElementById('vendedor-tabs');
+            tabsDiv.innerHTML = '';
+            vendedores.forEach(v => {
+                const btn = document.createElement('button');
+                btn.className = 'tab';
+                btn.textContent = v;
+                btn.onclick = () => selecionarAba(v);
+                tabsDiv.appendChild(btn);
+            });
+        }
+
+        function selecionarAba(vendedor) {
+            currentVendedor = vendedor;
+            document.querySelectorAll('.tab').forEach(t => {
+                t.classList.toggle('active', t.textContent === vendedor);
+            });
+            document.getElementById('filter-input').value = ''; // Limpar filtro
+            renderizarTela();
+        }
+
+        // RENDERIZAR TABELA E DASHBOARD
+        function renderizarTela() {
+            if (!currentVendedor) return;
+            
+            let itens = globalData.filter(d => d.vendedor === currentVendedor);
+            
+            // Regra de Ordenação Requerida:
+            // 1. Maior Faturamento
+            // 2. Acesso à plataforma ativo (Mesmo sem faturamento)
+            // 3. Sem acesso e Sem Faturamento
+            itens.sort((a, b) => {
+                if (b.faturamento !== a.faturamento) return b.faturamento - a.faturamento;
+                if (a.acesso && !b.acesso) return -1;
+                if (!a.acesso && b.acesso) return 1;
+                return 0;
+            });
+
+            // Aplica filtro de busca (se houver)
+            const filtro = document.getElementById('filter-input').value.toLowerCase();
+            if (filtro) itens = itens.filter(d => d.revenda.toLowerCase().includes(filtro));
+
+            atualizarDashboard(itens);
+            construirTabela(itens);
+        }
+
+        function construirTabela(itens) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            itens.forEach(item => {
+                const dadosSalvos = localCRM[item.revenda] || { data: '', assunto: '' };
+                const status = avaliarStatus(dadosSalvos.data);
+
+                const tr = document.createElement('tr');
+                
+                tr.innerHTML = `
+                    <td><strong>${item.revenda}</strong></td>
+                    <td>${formatarMoeda(item.faturamento)}</td>
+                    <td>${item.acesso ? 'Sim' : 'Não'}</td>
+                    <td><span class="classificacao">${item.classificacao}</span></td>
+                `;
+
+                // Campo de Data
+                const tdData = document.createElement('td');
+                const inData = document.createElement('input');
+                inData.type = 'date';
+                inData.value = dadosSalvos.data;
+                inData.className = 'input-field';
+                inData.onchange = (e) => salvarDados(item.revenda, e.target.value, null, tr);
+                tdData.appendChild(inData);
+                tr.appendChild(tdData);
+
+                // Campo de Assunto
+                const tdAssunto = document.createElement('td');
+                const inAssunto = document.createElement('input');
+                inAssunto.type = 'text';
+                inAssunto.value = dadosSalvos.assunto;
+                inAssunto.placeholder = "Resumo da conversa...";
+                inAssunto.className = 'input-field';
+                inAssunto.oninput = (e) => salvarDados(item.revenda, null, e.target.value, tr);
+                tdAssunto.appendChild(inAssunto);
+                tr.appendChild(tdAssunto);
+
+                // Status Tag (Farol)
+                const tdStatus = document.createElement('td');
+                tdStatus.className = 'status-cell';
+                tdStatus.innerHTML = `<span class="tag bg-${status.cor}">${status.txt}</span>`;
+                tr.appendChild(tdStatus);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ATUALIZAR DASHBOARD
+        function atualizarDashboard(itens) {
+            let engajadas = 0, evadidas = 0, inativas = 0, atendimentos = 0, fatAtivas = 0;
+
+            itens.forEach(item => {
+                if (item.classificacao === 'Revenda engajada') { engajadas++; fatAtivas += item.faturamento; }
+                else if (item.classificacao === 'Revenda evadida') { evadidas++; }
+                else if (item.classificacao === 'Revenda inativa') { inativas++; }
+
+                const salvo = localCRM[item.revenda];
+                if (salvo && salvo.data) atendimentos++;
+            });
+
+            document.getElementById('dash-total').textContent = itens.length;
+            document.getElementById('dash-engajadas').textContent = engajadas;
+            document.getElementById('dash-evadidas').textContent = evadidas;
+            document.getElementById('dash-inativas').textContent = inativas;
+            document.getElementById('dash-atendimentos').textContent = atendimentos;
+            
+            const media = engajadas > 0 ? (fatAtivas / engajadas) : 0;
+            document.getElementById('dash-media').textContent = formatarMoeda(media);
+        }
+
+        // SALVAR NO NAVEGADOR
+        function salvarDados(nomeRevenda, dataNova, assuntoNovo, linhaTabela) {
+            if (!localCRM[nomeRevenda]) localCRM[nomeRevenda] = { data: '', assunto: '' };
+            
+            if (dataNova !== null) localCRM[nomeRevenda].data = dataNova;
+            if (assuntoNovo !== null) localCRM[nomeRevenda].assunto = assuntoNovo;
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(localCRM));
+
+            // Atualiza a tag de farol na hora
+            if (dataNova !== null && linhaTabela) {
+                const status = avaliarStatus(dataNova);
+                linhaTabela.querySelector('.status-cell').innerHTML = `<span class="tag bg-${status.cor}">${status.txt}</span>`;
+                // Atualiza o dash pois o numero de atendimentos pode ter mudado
+                renderizarTela(); 
+            }
+        }
+
+        // EVENTOS GLOBAIS
+        document.getElementById('filter-input').addEventListener('input', renderizarTela);
+
+    </script>
+</body>
+</html>
