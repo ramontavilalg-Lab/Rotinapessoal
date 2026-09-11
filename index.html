@@ -13,7 +13,7 @@
         :root {
             --primary: #2e7d32;       /* Verde Energia Solar */
             --primary-dark: #1b5e20;  /* Verde Escuro */
-            --bg: #f4f7f6;            /* Fundo Claro/Branco */
+            --bg: #f4f7f6;            /* Fundo Claro */
             --white: #ffffff;
             --black: #212121;         /* Detalhes Pretos */
             --border: #e0e0e0;
@@ -21,6 +21,58 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
         body { background-color: var(--bg); color: var(--black); }
+
+        /* Tela de Login / Senha */
+        .login-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .login-card {
+            background: var(--white);
+            padding: 35px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+            border-top: 5px solid var(--primary);
+        }
+        .login-card h2 { color: var(--primary-dark); margin-bottom: 8px; font-size: 22px; }
+        .login-card p { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .login-card input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 15px;
+            margin-bottom: 15px;
+            outline: none;
+            text-align: center;
+        }
+        .login-card input:focus { border-color: var(--primary); }
+        .login-card button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-card button:hover { background-color: var(--primary-dark); }
+        .login-error { color: #c62828; font-size: 13px; font-weight: bold; margin-top: 12px; display: none; }
+
+        /* Aplicação Principal */
+        #main-app { display: none; }
+
         /* Cabeçalho e Legenda */
         header { background-color: var(--white); border-bottom: 3px solid var(--primary); padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         header h1 { font-size: 24px; color: var(--primary-dark); }
@@ -31,23 +83,28 @@
         .bg-green { background-color: #c8e6c9; color: #2e7d32; }
         .bg-yellow { background-color: #fff9c4; color: #f57f17; }
         .bg-red { background-color: #ffcdd2; color: #c62828; }
+        
         .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+        
         /* Abas (Tabs) */
         .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 20px; overflow-x: auto; gap: 5px; padding-bottom: 5px; }
-        .tab { padding: 10px 20px; cursor: pointer; border: none; background: transparent; font-size: 16px; font-weight: 600; color: #757575; border-bottom: 3px solid transparent; transition: 0.3s; white-space: nowrap; }
+        .tab { padding: 10px 20px; cursor: pointer; border: none; background: transparent; font-size: 15px; font-weight: 600; color: #757575; border-bottom: 3px solid transparent; transition: 0.3s; white-space: nowrap; }
         .tab:hover { color: var(--primary); }
         .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        
         /* Dashboard */
         .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .card { background: var(--white); padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid var(--primary); }
         .card.inativa { border-left-color: #c62828; }
         .card.evadida { border-left-color: #f57f17; }
-        .card h3 { font-size: 13px; color: #757575; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
-        .card .value { font-size: 26px; font-weight: bold; color: var(--black); }
+        .card h3 { font-size: 12px; color: #757575; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
+        .card .value { font-size: 24px; font-weight: bold; color: var(--black); }
+        
         /* Controles (Filtro) */
         .toolbar { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
         .search-box { padding: 10px 15px; border: 1px solid var(--border); border-radius: 4px; width: 350px; font-size: 14px; outline: none; }
         .search-box:focus { border-color: var(--primary); }
+        
         /* Tabela */
         .table-wrapper { background: var(--white); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto; max-height: 60vh; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -64,142 +121,180 @@
     </style>
 </head>
 <body>
-    <header>
-        <h1>☀️ Gestão Comercial de Revendas</h1>
-        <div class="legend">
-            <strong>Status do Contato:</strong>
-            <span class="tag bg-green">Na semana (≤ 7 dias)</span>
-            <span class="tag bg-yellow">No mês (≤ 30 dias)</span>
-            <span class="tag bg-red">Atrasado / S. Contato</span>
+
+    <!-- Tela de Autenticação -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <h2>☀️ Acesso ao Sistema</h2>
+            <p>Informe a senha para acessar a gestão comercial.</p>
+            <input type="password" id="password-input" placeholder="Digite a senha..." onkeydown="if(event.key === 'Enter') validarSenha()">
+            <button onclick="validarSenha()">Entrar</button>
+            <p id="login-error" class="login-error">Senha incorreta! Tente novamente.</p>
         </div>
-    </header>
-    <div class="container">
-        <div id="loader" class="loader">
-            Carregando e organizando dados da carteira...<br>
-            <small>(Conectando à planilha na nuvem)</small>
-        </div>
-        <div id="app-content">
-            <div class="tabs" id="vendedor-tabs"></div>
-            <div class="dashboard" id="dashboard">
-                <div class="card"><h3 title="Total na carteira">Total Revendas</h3><div class="value" id="dash-total">0</div></div>
-                <div class="card"><h3 title="Com faturamento">Engajadas</h3><div class="value" id="dash-engajadas">0</div></div>
-                <div class="card evadida"><h3 title="Com faturamento e sem acesso">Evadidas</h3><div class="value" id="dash-evadidas">0</div></div>
-                <div class="card inativa"><h3 title="Sem faturamento e sem acesso">Inativas</h3><div class="value" id="dash-inativas">0</div></div>
-                <div class="card"><h3 title="Com contatos recentes">Atendimentos</h3><div class="value" id="dash-atendimentos">0</div></div>
-                <div class="card"><h3 title="Faturamento médio das ativas">Ticket Médio (Ativas)</h3><div class="value" id="dash-media">R$ 0,00</div></div>
+    </div>
+
+    <!-- Conteúdo Principal da Aplicação -->
+    <div id="main-app">
+        <header>
+            <h1>☀️ Gestão Comercial de Revendas</h1>
+            <div class="legend">
+                <strong>Status do Contato:</strong>
+                <span class="tag bg-green">Na semana (≤ 7 dias)</span>
+                <span class="tag bg-yellow">No mês (≤ 30 dias)</span>
+                <span class="tag bg-red">Atrasado / S. Contato</span>
             </div>
-            <div class="toolbar">
-                <input type="text" id="filter-input" class="search-box" placeholder="Buscar revenda por nome...">
+        </header>
+
+        <div class="container">
+            <div id="loader" class="loader">
+                Carregando e organizando dados da carteira...<br>
+                <small>(Conectando à planilha na nuvem)</small>
             </div>
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th width="18%">Revenda</th>
-                            <th width="12%">Faturamento Ano</th>
-                            <th width="12%">Telefone</th>
-                            <th width="8%">Acesso?</th>
-                            <th width="12%">Classificação</th>
-                            <th width="11%">Data Últ. Conversa</th>
-                            <th width="17%">Assunto / Resumo</th>
-                            <th width="10%">Status (Farol)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <!-- Linhas geradas dinamicamente -->
-                    </tbody>
-                </table>
+
+            <div id="app-content">
+                <div class="tabs" id="vendedor-tabs"></div>
+
+                <div class="dashboard" id="dashboard">
+                    <div class="card"><h3 title="Total na carteira">Total Revendas</h3><div class="value" id="dash-total">0</div></div>
+                    <div class="card"><h3 title="Com faturamento">Engajadas</h3><div class="value" id="dash-engajadas">0</div></div>
+                    <div class="card evadida"><h3 title="Com faturamento e sem acesso">Evadidas</h3><div class="value" id="dash-evadidas">0</div></div>
+                    <div class="card inativa"><h3 title="Sem faturamento e sem acesso">Inativas</h3><div class="value" id="dash-inativas">0</div></div>
+                    <div class="card"><h3 title="Com contatos recentes">Atendimentos</h3><div class="value" id="dash-atendimentos">0</div></div>
+                    <div class="card"><h3 title="Faturamento médio das ativas">Ticket Médio (Ativas)</h3><div class="value" id="dash-media">R$ 0,00</div></div>
+                </div>
+
+                <div class="toolbar">
+                    <input type="text" id="filter-input" class="search-box" placeholder="Buscar revenda por nome...">
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="18%">Revenda</th>
+                                <th width="12%">Faturamento Ano</th>
+                                <th width="12%">Telefone</th>
+                                <th width="8%">Acesso?</th>
+                                <th width="12%">Classificação</th>
+                                <th width="11%">Data Últ. Conversa</th>
+                                <th width="17%">Assunto / Resumo</th>
+                                <th width="10%">Status (Farol)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Linhas geradas dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
+
     <script>
-        // CONFIGURAÇÃO DA PLANILHA
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTiu5kVcqWqUhRVRGorFZ8GuIAx5_RHGpgjZocVMv6RS_Ui-Ghipa1VsHEF89PN1T5Izf6ow8YiooXi/pub?gid=29863857&single=true&output=csv';
+        // CONFIGURAÇÕES
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTiu5kVcqWqUhRVRGorFZ8GuIAx5_RHGpgjZocVMv6RS_Ui-Ghipa1VsHEF89PN1T5Izf6ow8YiooXi/pub?gid=0&single=true&output=csv';
         const STORAGE_KEY = 'crm_solar_data';
-        
+        const SENHA_CORRETA = 'luzenergia';
+
         let globalData = [];
         let currentVendedor = null;
         let localCRM = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
 
-        // INICIALIZAÇÃO
-        Papa.parse(CSV_URL, {
-            download: true,
-            header: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-                processarDados(results.data);
-            },
-            error: function() {
-                document.getElementById('loader').innerHTML = 'Erro ao carregar dados. Verifique a conexão ou a URL do Google Sheets.';
+        // VERIFICAÇÃO DE SENHA
+        function validarSenha() {
+            const passInput = document.getElementById('password-input').value;
+            const errorMsg = document.getElementById('login-error');
+            
+            if (passInput === SENHA_CORRETA) {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                carregarDadosCSV();
+            } else {
+                errorMsg.style.display = 'block';
             }
-        });
+        }
 
-        // DETECÇÃO AVANÇADA E COMPATÍVEL DE COLUNAS
+        // CARREGAMENTO DO CSV
+        function carregarDadosCSV() {
+            Papa.parse(CSV_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processarDados(results.data);
+                },
+                error: function() {
+                    document.getElementById('loader').innerHTML = 'Erro ao carregar dados. Verifique a conexão ou a URL do Google Sheets.';
+                }
+            });
+        }
+
+        // MAPEAMENTO E DETECÇÃO DE COLUNAS
         function detectarColunas(headers) {
-            let cols = { vendedor: null, revenda: null, faturamento: null, telefone: null, acesso: null };
-
-            const clean = (str) => str ? str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() : '';
+            let cols = { vendedor: '', revenda: '', faturamento: '', telefone: '', acesso: '' };
 
             headers.forEach(h => {
-                const norm = clean(h);
+                const lower = h.trim().toLowerCase();
 
-                // Equipe / Vendedor
-                if (!cols.vendedor && (norm.includes('equipe') || norm.includes('atendimento') || norm.includes('vendedor') || norm.includes('ev'))) {
-                    cols.vendedor = h;
-                }
-                // Revenda / Fantasia
-                if (!cols.revenda && (norm.includes('fantasia') || norm.includes('revenda') || norm.includes('cliente'))) {
+                // Coluna C: Fantasia
+                if (lower === 'fantasia' || lower.includes('fantasia')) {
                     cols.revenda = h;
                 }
-                // Telefone / Celular / Fone
-                if (!cols.telefone && (norm.includes('telefone') || norm.includes('fone') || norm.includes('celular') || norm.includes('tel') || norm.includes('contato'))) {
-                    cols.telefone = h;
+                // Coluna N: Equipe de Atencimento - EV
+                else if (lower.includes('equipe de atencimento') || lower.includes('equipe de atendimento') || lower.includes('equipe')) {
+                    cols.vendedor = h;
                 }
-                // Faturamento
-                if (!cols.faturamento && (norm.includes('fatur') || norm.includes('valor') || norm.includes('venda'))) {
+                // Coluna U: Faturamento 2026
+                else if (lower.includes('faturamento 2026') || lower.includes('faturamento')) {
                     cols.faturamento = h;
                 }
-                // Acesso
-                if (!cols.acesso && (norm.includes('acess') || norm.includes('plataforma'))) {
+                // Coluna J: Telefone
+                else if (lower === 'telefone' || lower.includes('telefone') || lower.includes('fone') || lower.includes('celular')) {
+                    cols.telefone = h;
+                }
+                // Coluna de Acesso
+                else if (lower.includes('acesso') || lower.includes('plataforma') || lower.includes('ativo')) {
                     cols.acesso = h;
                 }
             });
 
-            // Fallbacks de segurança caso não encontre pelos nomes
-            if (!cols.vendedor) cols.vendedor = headers[0];
-            if (!cols.revenda) cols.revenda = headers[1] || headers[0];
-            if (!cols.faturamento) cols.faturamento = headers[2] || headers[0];
-            if (!cols.acesso) cols.acesso = headers[3] || headers[0];
+            // Fallback por índice se o cabeçalho não bater perfeitamente
+            if (!cols.revenda && headers[2]) cols.revenda = headers[2];          // Coluna C (Índice 2)
+            if (!cols.telefone && headers[9]) cols.telefone = headers[9];        // Coluna J (Índice 9)
+            if (!cols.vendedor && headers[13]) cols.vendedor = headers[13];     // Coluna N (Índice 13)
+            if (!cols.faturamento && headers[20]) cols.faturamento = headers[20]; // Coluna U (Índice 20)
 
             return cols;
         }
 
-        // PROCESSAMENTO DE DADOS (Limpeza e Classificação)
+        // PROCESSAMENTO DOS DADOS
         function processarDados(data) {
-            if (data.length === 0) return;
+            if (!data || data.length === 0) return;
+            
             const cols = detectarColunas(Object.keys(data[0]));
 
             globalData = data.map(row => {
-                const vendedor = row[cols.vendedor] ? row[cols.vendedor].trim() : 'Sem Vendedor';
-                const revenda = row[cols.revenda] ? row[cols.revenda].trim() : 'Revenda Indefinida';
+                const vendedor = (row[cols.vendedor] || 'Sem Vendedor').toString().trim();
+                const revenda = (row[cols.revenda] || '-').toString().trim();
                 const faturamento = limparMoeda(row[cols.faturamento]);
-                const telefone = (cols.telefone && row[cols.telefone]) ? row[cols.telefone].trim() : '-';
+                const telefone = (row[cols.telefone] || '-').toString().trim();
                 const acesso = validarAcesso(row[cols.acesso]);
                 const classificacao = definirClassificacao(faturamento, acesso);
-                
-                return { vendedor, revenda, faturamento, telefone, acesso, classificacao };
-            });
 
-            // Extrair Vendedores Únicos e criar as abas
+                return { vendedor, revenda, faturamento, telefone, acesso, classificacao };
+            }).filter(item => item.revenda !== '-' && item.revenda !== '');
+
+            // Extrair Vendedores Únicos para as Abas
             const vendedores = [...new Set(globalData.map(d => d.vendedor))].filter(v => v !== '').sort();
             gerarAbas(vendedores);
             
             if (vendedores.length > 0) selecionarAba(vendedores[0]);
+            
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
         }
 
-        // FUNÇÕES AUXILIARES DE LÓGICA COMERCIAL E TRATAMENTO
+        // TRATAMENTOS DE VALORES E FORMATOS
         function definirClassificacao(fat, acesso) {
             if (fat > 0 && acesso) return "Revenda engajada";
             if (fat > 0 && !acesso) return "Revenda evadida";
@@ -210,9 +305,14 @@
 
         function limparMoeda(valor) {
             if (!valor) return 0;
-            let numStr = valor.toString().replace(/[R$\s]/g, '');
-            if (numStr.includes('.') && numStr.includes(',')) numStr = numStr.replace(/\./g, '').replace(',', '.');
-            else if (numStr.includes(',')) numStr = numStr.replace(',', '.');
+            let numStr = valor.toString().replace(/[R$\s]/g, '').trim();
+            if (!numStr) return 0;
+
+            if (numStr.includes('.') && numStr.includes(',')) {
+                numStr = numStr.replace(/\./g, '').replace(',', '.');
+            } else if (numStr.includes(',')) {
+                numStr = numStr.replace(',', '.');
+            }
             const num = parseFloat(numStr);
             return isNaN(num) ? 0 : num;
         }
@@ -224,23 +324,23 @@
         function validarAcesso(valor) {
             if (!valor) return false;
             const s = valor.toString().toLowerCase().trim();
-            return s === 'sim' || s === 'true' || s === 'ativo' || s === '1' || s === 'ok';
+            return s === 'sim' || s === 'true' || s === 'ativo' || s === '1' || s === 'ok' || s === 's';
         }
 
-        // LÓGICA DE DATAS (Farol)
         function avaliarStatus(dataStr) {
             if (!dataStr) return { txt: 'Pendente', cor: 'red' };
             const [ano, mes, dia] = dataStr.split('-');
             const dataContato = new Date(ano, mes - 1, dia);
             const hoje = new Date();
             hoje.setHours(0, 0, 0, 0);
+            
             const diffDias = Math.floor((hoje - dataContato) / (1000 * 60 * 60 * 24));
             if (diffDias <= 7) return { txt: 'Na semana', cor: 'green' };
             if (diffDias <= 30) return { txt: 'No mês', cor: 'yellow' };
             return { txt: 'Atrasado', cor: 'red' };
         }
 
-        // FUNÇÕES DE INTERFACE (UI)
+        // INTERFACE DO USUÁRIO
         function gerarAbas(vendedores) {
             const tabsDiv = document.getElementById('vendedor-tabs');
             tabsDiv.innerHTML = '';
@@ -258,20 +358,16 @@
             document.querySelectorAll('.tab').forEach(t => {
                 t.classList.toggle('active', t.textContent === vendedor);
             });
-            document.getElementById('filter-input').value = ''; 
+            document.getElementById('filter-input').value = '';
             renderizarTela();
         }
 
-        // RENDERIZAR TABELA E DASHBOARD
         function renderizarTela() {
             if (!currentVendedor) return;
             
             let itens = globalData.filter(d => d.vendedor === currentVendedor);
             
-            // Regra de Ordenação:
-            // 1. Maior Faturamento
-            // 2. Acesso à plataforma ativo
-            // 3. Sem acesso e Sem Faturamento
+            // Ordenação: Maior Faturamento -> Acesso Ativo -> Sem Acesso
             itens.sort((a, b) => {
                 if (b.faturamento !== a.faturamento) return b.faturamento - a.faturamento;
                 if (a.acesso && !b.acesso) return -1;
@@ -279,10 +375,11 @@
                 return 0;
             });
 
-            // Aplica filtro de busca (se houver)
             const filtro = document.getElementById('filter-input').value.toLowerCase();
-            if (filtro) itens = itens.filter(d => d.revenda.toLowerCase().includes(filtro));
-            
+            if (filtro) {
+                itens = itens.filter(d => d.revenda.toLowerCase().includes(filtro));
+            }
+
             atualizarDashboard(itens);
             construirTabela(itens);
         }
@@ -290,6 +387,7 @@
         function construirTabela(itens) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
+
             itens.forEach(item => {
                 const dadosSalvos = localCRM[item.revenda] || { data: '', assunto: '' };
                 const status = avaliarStatus(dadosSalvos.data);
@@ -302,7 +400,7 @@
                     <td>${item.acesso ? 'Sim' : 'Não'}</td>
                     <td><span class="classificacao">${item.classificacao}</span></td>
                 `;
-                
+
                 // Campo de Data
                 const tdData = document.createElement('td');
                 const inData = document.createElement('input');
@@ -334,16 +432,18 @@
             });
         }
 
-        // ATUALIZAR DASHBOARD
         function atualizarDashboard(itens) {
             let engajadas = 0, evadidas = 0, inativas = 0, atendimentos = 0, fatAtivas = 0;
+
             itens.forEach(item => {
                 if (item.classificacao === 'Revenda engajada') { engajadas++; fatAtivas += item.faturamento; }
                 else if (item.classificacao === 'Revenda evadida') { evadidas++; }
                 else if (item.classificacao === 'Revenda inativa') { inativas++; }
+                
                 const salvo = localCRM[item.revenda];
                 if (salvo && salvo.data) atendimentos++;
             });
+
             document.getElementById('dash-total').textContent = itens.length;
             document.getElementById('dash-engajadas').textContent = engajadas;
             document.getElementById('dash-evadidas').textContent = evadidas;
@@ -354,23 +454,29 @@
             document.getElementById('dash-media').textContent = formatarMoeda(media);
         }
 
-        // SALVAR NO NAVEGADOR
         function salvarDados(nomeRevenda, dataNova, assuntoNovo, linhaTabela) {
             if (!localCRM[nomeRevenda]) localCRM[nomeRevenda] = { data: '', assunto: '' };
             
             if (dataNova !== null) localCRM[nomeRevenda].data = dataNova;
             if (assuntoNovo !== null) localCRM[nomeRevenda].assunto = assuntoNovo;
+
             localStorage.setItem(STORAGE_KEY, JSON.stringify(localCRM));
 
             if (dataNova !== null && linhaTabela) {
                 const status = avaliarStatus(dataNova);
                 linhaTabela.querySelector('.status-cell').innerHTML = `<span class="tag bg-${status.cor}">${status.txt}</span>`;
-                renderizarTela(); 
+                renderizarTela();
             }
         }
 
         // EVENTOS GLOBAIS
         document.getElementById('filter-input').addEventListener('input', renderizarTela);
+        
+        // Foco automático no campo de senha ao carregar
+        window.onload = () => {
+            const pwdField = document.getElementById('password-input');
+            if (pwdField) pwdField.focus();
+        };
     </script>
 </body>
 </html>
